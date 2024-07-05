@@ -1,6 +1,6 @@
-import { FetchError } from "src/errors";
+import { FetchError } from "../errors";
 import qs from "../qs";
-import { isAsyncFunction } from "../functions";
+import { isAsync } from "../functions";
 
 export interface IFetchProps<TResult> {
   onError?: (error: FetchError) => void;
@@ -11,10 +11,10 @@ export interface IFetchProps<TResult> {
 // Define a generic class for the fetch handler
 export default class Fetch {
   // Declare a private property for the abort controller
-  private controller: AbortController;
+  public controller: AbortController;
 
   // Declare a private property for the default headers
-  private defaultHeaders: HeadersInit;
+  public defaultHeaders: HeadersInit;
 
   private opt: IFetchProps<unknown>;
 
@@ -37,7 +37,7 @@ export default class Fetch {
 
     // Apply the request interceptor if unknown
     const config = this.opt.onRequest
-      ? isAsyncFunction(this.opt.onRequest)
+      ? isAsync(this.opt.onRequest)
         ? await this.opt.onRequest(options || {})
         : this.opt.onRequest(options || {})
       : options || {};

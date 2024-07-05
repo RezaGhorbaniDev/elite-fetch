@@ -22,7 +22,8 @@
     "typeRoots": ["./dist/index.d.ts", "node_modules/@types"],
     "paths": {
       "src/*": ["./src/*"]
-    }
+    },
+    "esModuleInterop": true
   },
   /* include /index.ts*/
   "include": ["src"],
