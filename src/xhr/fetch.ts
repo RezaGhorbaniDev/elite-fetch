@@ -8,50 +8,55 @@ export interface IFetchProps<TResult> {
   onRespond?: (result: TResult) => TResult;
 }
 
-// Define a generic class for the fetch handler
 export default class Fetch {
-  // Declare a private property for the abort controller
-  public controller: AbortController;
+  static locale?: string;
 
-  // Declare a private property for the default headers
-  public defaultHeaders: HeadersInit;
+  private controller: AbortController;
+
+  private headers: HeadersInit;
 
   private opt: IFetchProps<unknown>;
 
-  // Define a constructor that takes the base URL and an optional default headers object as arguments
+  //#region Constructor
+
   constructor(opt: IFetchProps<unknown> = {}) {
-    // Create a new abort controller and assign it to the property
     this.controller = new AbortController();
-    // Assign the default headers to the property or an empty object if not provided
-    this.defaultHeaders = {
+    this.headers = {
       "Content-Type": "application/json",
     };
+
+    // Set a default locale for the request if there's any
+    if (Fetch.locale)
+      this.headers = {
+        ...this.headers,
+        "Accept-Language": Fetch.locale,
+      };
 
     this.opt = opt;
   }
 
-  // Define a method that takes a relative URL and an optional options object as arguments
+  //#endregion
+
+  //#region Fetch Methods
+
+  //#region Fetch
+
   async fetch<T>(url: string, options?: RequestInit): Promise<T> {
-    // Get the signal from the abort controller
     const signal = this.controller.signal;
 
-    // Apply the request interceptor if unknown
     const config = this.opt.onRequest
       ? isAsync(this.opt.onRequest)
         ? await this.opt.onRequest(options || {})
         : this.opt.onRequest(options || {})
       : options || {};
 
-    // Use the fetch API to make the request and get the response, passing the signal, the credentials option and the merged headers to the options
-
     const response = await fetch(url, {
       ...config,
       signal,
       credentials: "include",
-      headers: { ...this.defaultHeaders, ...options?.headers },
+      headers: { ...this.headers, ...options?.headers },
     });
 
-    // Check if the response is ok
     if (response.ok) {
       let data;
       try {
@@ -72,34 +77,40 @@ export default class Fetch {
     }
   }
 
-  // Define a method that cancels the request by calling abort on the controller
+  //#endregion
+
+  //#region Cancel
+
   cancel(): void {
     this.controller.abort();
   }
 
-  // Define a method that makes a GET request with optional query parameters and an optional options object
+  //#endregion
+
+  //#region GET
+
   async get<T>(
     url: string,
     params?: Record<string, string>,
     options?: RequestInit
   ): Promise<T> {
-    // If params are provided, convert them to a query string and append it to the url
     if (params) {
       const queryString = qs.serialize(params);
       if (url.includes("?")) url += `&${queryString}`;
       else url += `?${queryString}`;
     }
-    // Call the fetch method with the url, a GET method option and an optional options object
     return this.fetch(url, { ...options, method: "GET" });
   }
 
-  // Define a method that makes a POST request with optional body data and an optional options object
+  //#endregion
+
+  //#region POST
+
   async post<T>(
     url: string,
     data?: unknown,
     options?: RequestInit
   ): Promise<T> {
-    // Call the fetch method with the url, a POST method option, a JSON stringified body option and an optional options object
     return this.fetch(url, {
       ...options,
       method: "POST",
@@ -107,9 +118,11 @@ export default class Fetch {
     });
   }
 
-  // Define a method that makes a PUT request with optional body data and an optional options object
+  //#endregion
+
+  //#region PUT
+
   async put<T>(url: string, data?: unknown, options?: RequestInit): Promise<T> {
-    // Call the fetch method with the url, a PUT method option, a JSON stringified body option and an optional options object
     return this.fetch(url, {
       ...options,
       method: "PUT",
@@ -117,13 +130,15 @@ export default class Fetch {
     });
   }
 
-  // Define a method that makes a DELETE request with optional body data and an optional options object
+  //#endregion
+
+  //#region DELETE
+
   async delete<T>(
     url: string,
     data?: unknown,
     options?: RequestInit
   ): Promise<T> {
-    // Call the fetch method with the url, a DELETE method option, a JSON stringified body option and an optional options object
     return this.fetch(url, {
       ...options,
       method: "DELETE",
@@ -131,12 +146,28 @@ export default class Fetch {
     });
   }
 
-  setCulture(culture?: string) {
-    if (culture)
-      this.defaultHeaders = {
-        ...this.defaultHeaders,
-        "Accept-Language": culture,
+  //#endregion
+
+  //#endregion
+
+  //#region Headers
+
+  //#region Set Locale
+  /**
+   *
+   * @param locale Sets the locale prefered by the client
+   * @returns the current instance
+   */
+  setLocale(locale?: string) {
+    if (locale)
+      this.headers = {
+        ...this.headers,
+        "Accept-Language": locale,
       };
     return this;
   }
+
+  //#endregion
+
+  //#endregion
 }

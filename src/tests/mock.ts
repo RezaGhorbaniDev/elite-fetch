@@ -1,3 +1,5 @@
+import Fetch from "../xhr/fetch";
+
 export const user = {
   fullName: "Reza Ghorbani",
   age: 28,
@@ -41,4 +43,5 @@ export const mockCreateUser = () => {
 
 export const resetMocks = () => {
   jest.clearAllMocks();
+  Fetch.locale = undefined;
 };
