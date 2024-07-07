@@ -1,4 +1,4 @@
-import { FetchError } from "../errors";
+import { FetchError, KeyNotFoundError, NoKeyProvidedError } from "../errors";
 import qs from "../qs";
 import { isAsync } from "../functions";
 
@@ -37,6 +37,7 @@ export default class Fetch {
 
   //#endregion
 
+  //=====================
   //#region Fetch Methods
 
   //#region Fetch
@@ -149,7 +150,9 @@ export default class Fetch {
   //#endregion
 
   //#endregion
+  //=====================
 
+  //===============
   //#region Headers
 
   //#region Set Locale
@@ -158,7 +161,7 @@ export default class Fetch {
    * @param locale Sets the locale prefered by the client
    * @returns the current instance
    */
-  setLocale(locale?: string) {
+  setLocale(locale?: string): this {
     if (locale)
       this.headers = {
         ...this.headers,
@@ -169,5 +172,58 @@ export default class Fetch {
 
   //#endregion
 
+  //#region header
+  /**
+   * return the value of a spicific request header item
+   * @param key
+   */
+  header(key: string): string | undefined;
+  /**
+   * Adds a request header to the request
+   * @param key
+   * @param value
+   */
+  header(key: string, value: string): this;
+
+  /**
+   * Implementation of the methods
+   * @param key
+   * @param value
+   * @returns
+   */
+  header(key: string, value?: string): (string | undefined) | this {
+    // it's a SET method for a request header
+    if (value) {
+      this.headers = {
+        ...this.headers,
+        [key]: value,
+      };
+      return this;
+    }
+
+    // it's a GET method for a request header
+    else {
+      return new Headers(this.headers).get(key) ?? undefined;
+    }
+  }
+
+  /**
+   * Removes a request header from the request
+   * @param key
+   */
+  removeHeader(key: string): this {
+    if (!key) throw new NoKeyProvidedError();
+
+    if (!this.header(key)) throw new KeyNotFoundError();
+
+    const { [key]: _, ...newHeaders } = this.headers as any;
+    this.headers = newHeaders as HeadersInit;
+
+    return this;
+  }
+
   //#endregion
+
+  //#endregion
+  //===============
 }

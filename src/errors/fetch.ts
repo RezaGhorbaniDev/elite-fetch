@@ -20,3 +20,15 @@ export class FetchError extends CustomError {
     this.name = "FetchError";
   }
 }
+
+export class NoKeyProvidedError extends CustomError {
+  constructor() {
+    super("No key provided!");
+  }
+}
+
+export class KeyNotFoundError extends CustomError {
+  constructor() {
+    super("key not found!");
+  }
+}
