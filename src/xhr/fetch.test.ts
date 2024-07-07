@@ -1,3 +1,4 @@
+import { mockGetUsers, resetMocks, users } from "../tests/mock";
 import Fetch from "./fetch";
 
 describe("fetchData", () => {
@@ -6,23 +7,19 @@ describe("fetchData", () => {
   beforeEach(() => {
     fetch = new Fetch();
   });
+  afterEach(() => {
+    resetMocks();
+  });
 
+
+  // GET
   it("fetches data from the given URL", async () => {
-    const mockData = { data: "test" };
+    mockGetUsers();
 
-    // Mock the response
-    global.fetch = jest.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve(mockData),
-      } as Response)
-    );
+    const data = await fetch.get("http://example.com/data");
 
-    const data = await fetch.get<typeof mockData>("http://example.com/data");
+    expect(data).toEqual(users);
 
-    expect(data).toEqual({ data: "test" });
-
-    // Assert fetch was called once
     expect(global.fetch).toHaveBeenCalledTimes(1);
 
     const [url] = (global.fetch as any).mock.calls[0];
