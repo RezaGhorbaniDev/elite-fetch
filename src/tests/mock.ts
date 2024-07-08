@@ -1,4 +1,4 @@
-import Fetch from "../xhr/fetch";
+import Fetch from "../http/fetch";
 
 export const user = {
   fullName: "Reza Ghorbani",
