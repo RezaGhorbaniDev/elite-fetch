@@ -1,4 +1,4 @@
-import { FetchError, NotImplementedError } from "src/errors";
+import { FetchError, NotImplementedError } from "src/lib/errors";
 import Fetch from "./fetch";
 
 function handleError({ statusCode, message }: FetchError) {

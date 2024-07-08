@@ -43,5 +43,5 @@ export const mockCreateUser = () => {
 
 export const resetMocks = () => {
   jest.clearAllMocks();
-  Fetch.locale = undefined;
+  Fetch.global = {};
 };

@@ -1,38 +1,37 @@
-import { FetchError, KeyNotFoundError, NoKeyProvidedError } from "../errors";
+import {
+  FetchError,
+  KeyNotFoundError,
+  NoKeyProvidedError,
+  WrongLocaleError,
+} from "../lib/errors";
 import qs from "../qs";
 import { isAsync } from "../functions";
-
-export interface IFetchProps<TResult> {
-  onError?: (error: FetchError) => void;
-  onRequest?: (config: RequestInit) => RequestInit | Promise<RequestInit>;
-  onRespond?: (result: TResult) => TResult;
-}
+import type { FetchDefaultSettings } from "./types";
+import { ACCEPT_LANGUAGE, AUTHORIZATION } from "../lib/constants";
 
 export default class Fetch {
-  static locale?: string;
+  static global: FetchDefaultSettings = {};
 
   private controller: AbortController;
 
-  private headers: HeadersInit;
-
-  private opt: IFetchProps<unknown>;
+  private init: RequestInit;
 
   //#region Constructor
 
-  constructor(opt: IFetchProps<unknown> = {}) {
+  constructor() {
     this.controller = new AbortController();
-    this.headers = {
-      "Content-Type": "application/json",
+    this.init = {
+      headers: {
+        "Content-Type": "application/json",
+      },
     };
 
     // Set a default locale for the request if there's any
-    if (Fetch.locale)
-      this.headers = {
-        ...this.headers,
-        "Accept-Language": Fetch.locale,
+    if (Fetch.global.locale)
+      this.init.headers = {
+        ...this.init.headers,
+        [ACCEPT_LANGUAGE]: Fetch.global.locale,
       };
-
-    this.opt = opt;
   }
 
   //#endregion
@@ -42,21 +41,16 @@ export default class Fetch {
 
   //#region Fetch
 
-  async fetch<T>(url: string, options?: RequestInit): Promise<T> {
-    const signal = this.controller.signal;
+  private async fetch<T>(url: string, options: RequestInit): Promise<T> {
+    const init = this.config(options);
+    init.signal = this.controller.signal;
 
-    const config = this.opt.onRequest
-      ? isAsync(this.opt.onRequest)
-        ? await this.opt.onRequest(options || {})
-        : this.opt.onRequest(options || {})
-      : options || {};
+    if (Fetch.global.onRequest)
+      if (isAsync(Fetch.global.onRequest))
+        await Fetch.global.onRequest(options);
+      else Fetch.global.onRequest(options);
 
-    const response = await fetch(url, {
-      ...config,
-      signal,
-      credentials: "include",
-      headers: { ...this.headers, ...options?.headers },
-    });
+    const response = await fetch(url, init);
 
     if (response.ok) {
       let data;
@@ -67,12 +61,12 @@ export default class Fetch {
       }
 
       // Apply the response interceptor if unknown
-      return this.opt.onRespond ? this.opt.onRespond(data) : data;
+      return Fetch.global.onRespond ? Fetch.global.onRespond(data) : data;
     } else {
       // Throw an error with the status text
       const error = new FetchError(response.status, response.statusText);
 
-      this.opt.onError && this.opt.onError(error);
+      Fetch.global.onError && Fetch.global.onError(error);
 
       throw error;
     }
@@ -162,11 +156,28 @@ export default class Fetch {
    * @returns the current instance
    */
   setLocale(locale?: string): this {
-    if (locale)
-      this.headers = {
-        ...this.headers,
-        "Accept-Language": locale,
-      };
+    if (!locale) throw new WrongLocaleError();
+
+    this.header(ACCEPT_LANGUAGE, locale);
+    return this;
+  }
+
+  //#endregion
+
+  //#region Set Token
+  setAuthToken(token: string): this {
+    if (!token) throw new NoKeyProvidedError();
+
+    this.header(AUTHORIZATION, token);
+    return this;
+  }
+
+  includeCredentials() {
+    this.init = {
+      ...this.init,
+      credentials: "include",
+    };
+
     return this;
   }
 
@@ -194,8 +205,8 @@ export default class Fetch {
   header(key: string, value?: string): (string | undefined) | this {
     // it's a SET method for a request header
     if (value) {
-      this.headers = {
-        ...this.headers,
+      this.init.headers = {
+        ...this.init.headers,
         [key]: value,
       };
       return this;
@@ -203,7 +214,7 @@ export default class Fetch {
 
     // it's a GET method for a request header
     else {
-      return new Headers(this.headers).get(key) ?? undefined;
+      return new Headers(this.init.headers).get(key) ?? undefined;
     }
   }
 
@@ -216,8 +227,8 @@ export default class Fetch {
 
     if (!this.header(key)) throw new KeyNotFoundError();
 
-    const { [key]: _, ...newHeaders } = this.headers as any;
-    this.headers = newHeaders as HeadersInit;
+    const { [key]: _, ...newHeaders } = this.init.headers as any;
+    this.init.headers = newHeaders as HeadersInit;
 
     return this;
   }
@@ -226,4 +237,30 @@ export default class Fetch {
 
   //#endregion
   //===============
+
+  //==============
+  //#region Init
+
+  private config(options: RequestInit): RequestInit {
+    // Include global locale to fetch init if there's any
+    if (!this.header(ACCEPT_LANGUAGE) && Fetch.global.locale)
+      this.setLocale(Fetch.global.locale);
+
+    // Include global auth token to fetch init if there's any
+    if (!this.header(AUTHORIZATION) && Fetch.global.authToken)
+      this.setAuthToken(Fetch.global.authToken);
+
+    // Merge global headers with provided headers
+    if (Fetch.global.headers)
+      this.init.headers = { ...Fetch.global.headers, ...this.init.headers };
+
+    // Incldue credentials if its globally set
+    if (Fetch.global.includeCredentials) this.includeCredentials();
+
+    // Merge request config with request method and body
+    return { ...this.init, ...options };
+  }
+
+  //#endregion
+  //==============
 }

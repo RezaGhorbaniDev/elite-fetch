@@ -1,4 +1,5 @@
-import { KeyNotFoundError, NoKeyProvidedError } from "../errors";
+import { ACCEPT_LANGUAGE } from "../lib/constants";
+import { KeyNotFoundError, NoKeyProvidedError } from "../lib/errors";
 import { mockGetUsers, resetMocks, users } from "../tests/mock";
 import Fetch from "./fetch";
 
@@ -11,17 +12,17 @@ describe("Initializing the fetch", () => {
    * it should set the locale globally
    */
   it("should set the locale globally", async () => {
-    Fetch.locale = globalLocale;
+    Fetch.global.locale = globalLocale;
 
     const fetch = new Fetch();
-    expect(fetch.header("Accept-Language")).toEqual(globalLocale);
+    expect(fetch.header(ACCEPT_LANGUAGE)).toEqual(globalLocale);
   });
 
   /**
    * it should override the default locale
    */
   it("should override the default locale", async () => {
-    Fetch.locale = globalLocale;
+    Fetch.global.locale = globalLocale;
 
     // Init with default locale
     const fetch = new Fetch();
@@ -30,9 +31,9 @@ describe("Initializing the fetch", () => {
     const anotherFetch = new Fetch();
     anotherFetch.setLocale("fa-IR");
 
-    expect(anotherFetch.header("Accept-Language")).toEqual("fa-IR");
+    expect(anotherFetch.header(ACCEPT_LANGUAGE)).toEqual("fa-IR");
 
-    expect(fetch.header("Accept-Language")).toEqual(globalLocale);
+    expect(fetch.header(ACCEPT_LANGUAGE)).toEqual(globalLocale);
   });
 
   //#endregion
@@ -44,16 +45,16 @@ describe("Initializing the fetch", () => {
    */
   it("should change the locale by header method", async () => {
     const fetch = new Fetch();
-    fetch.header("Accept-Language", "fa-IR");
+    fetch.header(ACCEPT_LANGUAGE, "fa-IR");
 
-    expect(fetch.header("Accept-Language")).toEqual("fa-IR");
+    expect(fetch.header(ACCEPT_LANGUAGE)).toEqual("fa-IR");
   });
 
   /**
    * it should throw error if key is null or empty
    */
   it("should throw error if key is null or empty", async () => {
-    Fetch.locale = globalLocale;
+    Fetch.global.locale = globalLocale;
 
     const fetch = new Fetch();
 
@@ -64,7 +65,7 @@ describe("Initializing the fetch", () => {
    * it should throw error if key is not found
    */
   it("should throw error if key is not found", async () => {
-    Fetch.locale = globalLocale;
+    Fetch.global.locale = globalLocale;
 
     const fetch = new Fetch();
 
@@ -75,12 +76,12 @@ describe("Initializing the fetch", () => {
    * it should remove the given attribute
    */
   it("should remove the given attribute", async () => {
-    Fetch.locale = globalLocale;
+    Fetch.global.locale = globalLocale;
 
     const fetch = new Fetch();
-    fetch.removeHeader("Accept-Language");
+    fetch.removeHeader(ACCEPT_LANGUAGE);
 
-    expect(fetch.header("Accept-Language")).toBeUndefined();
+    expect(fetch.header(ACCEPT_LANGUAGE)).toBeUndefined();
   });
 
   //#endregion

@@ -32,3 +32,9 @@ export class KeyNotFoundError extends CustomError {
     super("key not found!");
   }
 }
+
+export class WrongLocaleError extends CustomError {
+  constructor() {
+    super("Wrong locale format!");
+  }
+}
