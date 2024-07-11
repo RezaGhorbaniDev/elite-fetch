@@ -14,4 +14,5 @@ export type FetchDefaultSettings = FetchEvents & {
   authToken?: string;
   headers?: HeadersInit;
   includeCredentials?: boolean;
+  baseUrl?: string;
 };

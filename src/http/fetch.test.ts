@@ -9,6 +9,70 @@ import {
 } from "../tests/mock";
 import Fetch from "./fetch";
 
+describe("Base Url", () => {
+  let fetch: Fetch;
+
+  beforeEach(() => {
+    fetch = new Fetch();
+  });
+  afterEach(() => {
+    resetMocks();
+  });
+
+  /**
+   * it should combine the global base url with given, after initialization
+   */
+  test("Global base url, after initialization", async () => {
+    mockGetUsers();
+
+    Fetch.global.baseUrl = "http://example.com/";
+    await fetch.get("data");
+
+    const [url] = (global.fetch as any).mock.calls[0];
+    expect(url).toBe("http://example.com/data");
+  });
+
+  /**
+   * it should combine the global base url with given, before initialization
+   */
+  test("Global base url, before initialization", async () => {
+    mockGetUsers();
+
+    Fetch.global.baseUrl = "http://example.com/";
+    const fetch = new Fetch();
+    await fetch.get("data");
+
+    const [url] = (global.fetch as any).mock.calls[0];
+    expect(url).toBe("http://example.com/data");
+  });
+
+  /**
+   * it should check for double slashes in the url and replace them with 1 slash
+   */
+  test("handling double slashes", async () => {
+    mockGetUsers();
+
+    Fetch.global.baseUrl = "http://example.com/";
+    await fetch.get("/data");
+
+    const [url] = (global.fetch as any).mock.calls[0];
+    expect(url).toBe("http://example.com/data");
+  });
+
+  /**
+   * it should check add a slash between base url and given, if there's none
+   */
+  test("handling no slashes", async () => {
+    mockGetUsers();
+
+    Fetch.global.baseUrl = "http://example.com";
+    await fetch.get("data");
+
+    const [url] = (global.fetch as any).mock.calls[0];
+    expect(url).toBe("http://example.com/data");
+  });
+});
+
 describe("Headers CRUD", () => {
   let fetch: Fetch;
   const globalLocale = "fr-FR";

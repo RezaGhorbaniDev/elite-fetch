@@ -16,9 +16,12 @@ export default class Fetch {
 
   private init: RequestInit;
 
+  private baseUrl: string;
+
   //#region Constructor
 
   constructor() {
+    this.baseUrl = "";
     this.controller = new AbortController();
     this.init = {
       headers: {
@@ -55,7 +58,8 @@ export default class Fetch {
         await Fetch.global.onRequest(options);
       else Fetch.global.onRequest(options);
 
-    const response = await fetch(url, init);
+    const fullUrl = this.getFullUrl(url);
+    const response = await fetch(fullUrl, init);
 
     if (response.ok) {
       let data;
@@ -310,4 +314,36 @@ export default class Fetch {
 
   //#endregion
   //==============
+
+  //================
+  //#region Url
+
+  /**
+   * Sets the base url for the http instance
+   * @param baseUrl
+   */
+  setBaseUrl(baseUrl: string) {
+    this.baseUrl = baseUrl;
+  }
+
+  /**
+   * combines the given url with base url if there's any
+   * @param url
+   * @returns Full URL
+   */
+  private getFullUrl(url: string) {
+    const baseUrl = this.baseUrl || Fetch.global.baseUrl;
+
+    if (!baseUrl) return url;
+
+    // Avoid double slash
+    if (baseUrl.endsWith("/") && url.startsWith("/")) url = url.substring(1);
+    // Avoid no slash between them
+    else if (!baseUrl.endsWith("/") && !url.startsWith("/")) url = "/" + url;
+
+    return baseUrl + url;
+  }
+
+  //#endregion
+  //================
 }
