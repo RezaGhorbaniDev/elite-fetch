@@ -40,7 +40,12 @@ export default class Fetch {
   //#region Fetch Methods
 
   //#region Fetch
-
+  /**
+   * base fetch function to use in other methods
+   * @param url
+   * @param options fetch request init
+   * @returns a promise of the fetched data
+   */
   private async fetch<T>(url: string, options: RequestInit): Promise<T> {
     const init = this.config(options);
     init.signal = this.controller.signal;
@@ -75,7 +80,9 @@ export default class Fetch {
   //#endregion
 
   //#region Cancel
-
+  /**
+   * aborts the request
+   */
   cancel(): void {
     this.controller.abort();
   }
@@ -83,7 +90,13 @@ export default class Fetch {
   //#endregion
 
   //#region GET
-
+  /**
+   * makes a GET method request
+   * @param url
+   * @param params parameters to be added to url as querystring
+   * @param options fetch request init
+   * @returns a promise of the fetched data
+   */
   async get<T>(
     url: string,
     params?: Record<string, string>,
@@ -101,6 +114,14 @@ export default class Fetch {
 
   //#region POST
 
+  /**
+   * makes a POST method request
+   * @param url
+   * @param data the data to be posted
+   * @param options fetch request init
+   * @returns a promise of the result of fetch
+   * @returns
+   */
   async post<T>(
     url: string,
     data?: unknown,
@@ -117,6 +138,14 @@ export default class Fetch {
 
   //#region PUT
 
+  /**
+   * makes a PUT method request
+   * @param url
+   * @param data the data to be parsed into request body
+   * @param options fetch request init
+   * @returns a promise of the result of fetch
+   * @returns
+   */
   async put<T>(url: string, data?: unknown, options?: RequestInit): Promise<T> {
     return this.fetch(url, {
       ...options,
@@ -129,6 +158,14 @@ export default class Fetch {
 
   //#region DELETE
 
+  /**
+   * makes a DELETE method request
+   * @param url
+   * @param data the data to be parsed into request body
+   * @param options fetch request init
+   * @returns a promise of the result of fetch
+   * @returns
+   */
   async delete<T>(
     url: string,
     data?: unknown,
@@ -151,8 +188,8 @@ export default class Fetch {
 
   //#region Set Locale
   /**
-   *
-   * @param locale Sets the locale prefered by the client
+   * Sets the "Accept-Language" header of the request
+   * @param locale
    * @returns the current instance
    */
   setLocale(locale?: string): this {
@@ -165,6 +202,12 @@ export default class Fetch {
   //#endregion
 
   //#region Set Token
+
+  /**
+   * Sets the "Authorization" header of the request
+   * @param token
+   * @returns the current instance
+   */
   setAuthToken(token: string): this {
     if (!token) throw new NoKeyProvidedError();
 
@@ -172,6 +215,10 @@ export default class Fetch {
     return this;
   }
 
+  /**
+   * Includes credentials and http-cookied in the request
+   * @returns the current instance
+   */
   includeCredentials() {
     this.init = {
       ...this.init,
@@ -183,14 +230,14 @@ export default class Fetch {
 
   //#endregion
 
-  //#region header
+  //#region Header CRUD
   /**
-   * return the value of a spicific request header item
+   * returns the value of a spicific request header item
    * @param key
    */
   header(key: string): string | undefined;
   /**
-   * Adds a request header to the request
+   * Adds/Modifies a request header
    * @param key
    * @param value
    */
