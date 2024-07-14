@@ -21,6 +21,24 @@ export class FetchError extends CustomError {
   }
 }
 
+export class RequestError extends FetchError {
+  constructor() {
+    super(-1, "There's something wrong with the request initialization!");
+  }
+}
+
+export class RequestTimeoutError extends CustomError {
+  constructor(timeout: number) {
+    super(`Request aborted due to timeout (${timeout}ms)`);
+  }
+}
+
+export class RequestAbortError extends CustomError {
+  constructor() {
+    super("Request aborted!");
+  }
+}
+
 export class NoKeyProvidedError extends CustomError {
   constructor() {
     super("No key provided!");

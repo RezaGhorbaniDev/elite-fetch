@@ -2,6 +2,7 @@ import { ACCEPT_LANGUAGE, AUTHORIZATION } from "../lib/constants";
 import { KeyNotFoundError, NoKeyProvidedError } from "../lib/errors";
 import {
   mockCreateUser,
+  mockFetchLongResponse,
   mockGetUsers,
   resetMocks,
   user,
@@ -285,5 +286,33 @@ describe("fetchData", () => {
 
     const [url] = (global.fetch as any).mock.calls[0];
     expect(url).toBe("http://example.com/data");
+  });
+});
+
+describe("Timeout & Cancelation", () => {
+  let fetch: Fetch;
+
+  beforeEach(() => {
+    fetch = new Fetch();
+  });
+  afterEach(() => {
+    resetMocks();
+  });
+
+  /**
+   * it should abort the request after timeout
+   */
+  test("Timeout", async () => {
+    mockFetchLongResponse(6000);
+    const cancelMethod = jest.spyOn(fetch, "cancel");
+
+    try {
+      const data = await fetch.get("http://example.com/data");
+
+      expect(data).toEqual(users);
+    } catch (error) {}
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(cancelMethod).toHaveBeenCalledTimes(1);
   });
 });

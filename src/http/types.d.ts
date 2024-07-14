@@ -1,6 +1,10 @@
+import { FetchError, RequestError } from "../lib/errors";
+
 export type ErrorCallback = (error: FetchError) => void;
 export type RequestCallback = (config: RequestInit) => void | Promise<void>;
-export type RespondCallback = (result: TResult) => TResult;
+export type RespondCallback = <TResult>(
+  result: TResult
+) => TResult | Promise<TResult>;
 
 export type FetchEvents = {
   onError?: ErrorCallback;
@@ -15,4 +19,5 @@ export type FetchDefaultSettings = FetchEvents & {
   headers?: HeadersInit;
   includeCredentials?: boolean;
   baseUrl?: string;
+  timeout: number;
 };

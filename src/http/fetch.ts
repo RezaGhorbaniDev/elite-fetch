@@ -3,25 +3,37 @@ import {
   KeyNotFoundError,
   NoKeyProvidedError,
   WrongLocaleError,
+  RequestError,
+  RequestAbortError,
+  RequestTimeoutError,
 } from "../lib/errors";
 import qs from "../qs";
 import { isAsync } from "../functions";
 import type { FetchDefaultSettings } from "./types";
-import { ACCEPT_LANGUAGE, AUTHORIZATION } from "../lib/constants";
+import {
+  ABORT_ERROR,
+  ACCEPT_LANGUAGE,
+  AUTHORIZATION,
+  TIMEOUT_ERROR,
+} from "../lib/constants";
 
 export default class Fetch {
-  static global: FetchDefaultSettings = {};
+  static global: FetchDefaultSettings = {
+    timeout: 5000,
+  };
 
   private controller: AbortController;
 
   private init: RequestInit;
 
   private baseUrl: string;
+  private timeout: number;
 
   //#region Constructor
 
   constructor() {
     this.baseUrl = "";
+    this.timeout = Fetch.global.timeout;
     this.controller = new AbortController();
     this.init = {
       headers: {
@@ -59,7 +71,7 @@ export default class Fetch {
       else Fetch.global.onRequest(options);
 
     const fullUrl = this.getFullUrl(url);
-    const response = await fetch(fullUrl, init);
+    const response = await this.fetchWithTimeout(fullUrl, init);
 
     if (response.ok) {
       let data;
@@ -70,7 +82,13 @@ export default class Fetch {
       }
 
       // Apply the response interceptor if unknown
-      return Fetch.global.onRespond ? Fetch.global.onRespond(data) : data;
+      return Fetch.global.onRespond
+        ? isAsync(Fetch.global.onRespond)
+          ? // is async
+            await Fetch.global.onRespond(data)
+          : // is not
+            Fetch.global.onRespond(data)
+        : data;
     } else {
       // Throw an error with the status text
       const error = new FetchError(response.status, response.statusText);
@@ -83,12 +101,26 @@ export default class Fetch {
 
   //#endregion
 
-  //#region Cancel
-  /**
-   * aborts the request
-   */
-  cancel(): void {
-    this.controller.abort();
+  //#region Fetch with timeout
+
+  private async fetchWithTimeout(url: string, init: RequestInit) {
+    const id = setTimeout(() => this.cancel(), this.timeout);
+
+    try {
+      const response = await fetch(url, init);
+      clearTimeout(id);
+      return response;
+    } catch (e) {
+      const error = e as Error;
+
+      if (error.name === ABORT_ERROR) {
+        throw new RequestAbortError();
+      } else if (error.name === TIMEOUT_ERROR) {
+        throw new RequestTimeoutError(this.timeout);
+      }
+
+      throw new RequestError();
+    }
   }
 
   //#endregion
@@ -180,6 +212,16 @@ export default class Fetch {
       method: "DELETE",
       body: JSON.stringify(data),
     });
+  }
+
+  //#endregion
+
+  //#region Cancel
+  /**
+   * aborts the request
+   */
+  cancel(): void {
+    this.controller.abort();
   }
 
   //#endregion
@@ -289,7 +331,7 @@ export default class Fetch {
   //#endregion
   //===============
 
-  //==============
+  //============
   //#region Init
 
   private config(options: RequestInit): RequestInit {
@@ -313,9 +355,9 @@ export default class Fetch {
   }
 
   //#endregion
-  //==============
+  //============
 
-  //================
+  //===========
   //#region Url
 
   /**
@@ -345,5 +387,19 @@ export default class Fetch {
   }
 
   //#endregion
-  //================
+  //===========
+
+  //===========
+  //#region Timeout
+
+  /**
+   * sets the timeout for the current http instance
+   * @param timeout
+   */
+  setTimeout(timeout: number) {
+    this.timeout = timeout;
+  }
+
+  //#endregion
+  //===========
 }
