@@ -9,7 +9,12 @@ import {
 } from "../lib/errors";
 import qs from "../qs";
 import { isAsync } from "../functions";
-import type { FetchProps, RequestProps, InnerRequestProps } from "./types";
+import type {
+  FetchProps,
+  RequestProps,
+  InnerRequestProps,
+  UrlParameters,
+} from "./types";
 import {
   ABORT_ERROR,
   ACCEPT_LANGUAGE,
@@ -147,7 +152,7 @@ export default class Fetch {
    */
   async get<T>(
     url: string,
-    params?: Record<string, string>,
+    params?: UrlParameters,
     props?: RequestProps
   ): Promise<T> {
     if (params) {

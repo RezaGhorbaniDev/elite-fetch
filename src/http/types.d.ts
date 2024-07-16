@@ -14,6 +14,8 @@ export type FetchEvents = {
   onRespond?: RespondCallback;
 };
 
+export type UrlParameters = Record<string, string | number>;
+
 export type RequestProps = {
   // props
   locale?: string;
