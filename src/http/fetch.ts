@@ -9,44 +9,53 @@ import {
 } from "../lib/errors";
 import qs from "../qs";
 import { isAsync } from "../functions";
-import type { FetchDefaultSettings } from "./types";
+import type { FetchProps, RequestProps, InnerRequestProps } from "./types";
 import {
   ABORT_ERROR,
   ACCEPT_LANGUAGE,
   AUTHORIZATION,
+  TIMEOUT_DURATION,
   TIMEOUT_ERROR,
 } from "../lib/constants";
 
+const defaultSettings: FetchProps = {
+  headers: {
+    "Content-Type": "application/json",
+  },
+  timeout: TIMEOUT_DURATION,
+  baseUrl: "",
+};
+
+/**
+ * Advanced http request class
+ */
 export default class Fetch {
-  static global: FetchDefaultSettings = {
-    timeout: 5000,
-  };
+  // outer level
+  /**
+   * Settings for all http instances
+   */
+  static global: FetchProps = structuredClone(defaultSettings);
 
-  private controller: AbortController;
+  // inner level
+  /**
+   * Settings for all requests by the current instance
+   */
+  private current: FetchProps;
 
+  /**
+   * Request initilization
+   */
   private init: RequestInit;
 
-  private baseUrl: string;
-  private timeout: number;
+  private controller: AbortController;
 
   //#region Constructor
 
   constructor() {
-    this.baseUrl = "";
-    this.timeout = Fetch.global.timeout;
     this.controller = new AbortController();
-    this.init = {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    };
-
-    // Set a default locale for the request if there's any
-    if (Fetch.global.locale)
-      this.init.headers = {
-        ...this.init.headers,
-        [ACCEPT_LANGUAGE]: Fetch.global.locale,
-      };
+    this.current = structuredClone(defaultSettings);
+    this.init = {};
+    this.applyGlobalToCurrent();
   }
 
   //#endregion
@@ -54,14 +63,17 @@ export default class Fetch {
   //=====================
   //#region Fetch Methods
 
-  //#region Fetch
+  //#region Resquest
   /**
-   * base fetch function to use in other methods
+   * base request function to use in other methods
    * @param url
-   * @param options fetch request init
+   * @param props fetch request init
    * @returns a promise of the fetched data
    */
-  private async fetch<T>(url: string, options: RequestInit): Promise<T> {
+  private async request<T>(
+    url: string,
+    options: InnerRequestProps
+  ): Promise<T> {
     const init = this.config(options);
     init.signal = this.controller.signal;
 
@@ -71,7 +83,7 @@ export default class Fetch {
       else Fetch.global.onRequest(options);
 
     const fullUrl = this.getFullUrl(url);
-    const response = await this.fetchWithTimeout(fullUrl, init);
+    const response = await this.requestWithTimeout(fullUrl, init);
 
     if (response.ok) {
       let data;
@@ -103,8 +115,8 @@ export default class Fetch {
 
   //#region Fetch with timeout
 
-  private async fetchWithTimeout(url: string, init: RequestInit) {
-    const id = setTimeout(() => this.cancel(), this.timeout);
+  private async requestWithTimeout(url: string, init: RequestInit) {
+    const id = setTimeout(() => this.cancel(), this.current.timeout);
 
     try {
       const response = await fetch(url, init);
@@ -116,7 +128,7 @@ export default class Fetch {
       if (error.name === ABORT_ERROR) {
         throw new RequestAbortError();
       } else if (error.name === TIMEOUT_ERROR) {
-        throw new RequestTimeoutError(this.timeout);
+        throw new RequestTimeoutError(this.current.timeout!);
       }
 
       throw new RequestError();
@@ -130,20 +142,20 @@ export default class Fetch {
    * makes a GET method request
    * @param url
    * @param params parameters to be added to url as querystring
-   * @param options fetch request init
+   * @param props request configurations
    * @returns a promise of the fetched data
    */
   async get<T>(
     url: string,
     params?: Record<string, string>,
-    options?: RequestInit
+    props?: RequestProps
   ): Promise<T> {
     if (params) {
       const queryString = qs.serialize(params);
       if (url.includes("?")) url += `&${queryString}`;
       else url += `?${queryString}`;
     }
-    return this.fetch(url, { ...options, method: "GET" });
+    return this.request(url, { ...props, method: "GET" });
   }
 
   //#endregion
@@ -154,19 +166,15 @@ export default class Fetch {
    * makes a POST method request
    * @param url
    * @param data the data to be posted
-   * @param options fetch request init
+   * @param props request configurations
    * @returns a promise of the result of fetch
    * @returns
    */
-  async post<T>(
-    url: string,
-    data?: unknown,
-    options?: RequestInit
-  ): Promise<T> {
-    return this.fetch(url, {
-      ...options,
+  async post<T>(url: string, data?: unknown, props?: RequestProps): Promise<T> {
+    return this.request(url, {
+      ...props,
+      data,
       method: "POST",
-      body: JSON.stringify(data),
     });
   }
 
@@ -178,15 +186,15 @@ export default class Fetch {
    * makes a PUT method request
    * @param url
    * @param data the data to be parsed into request body
-   * @param options fetch request init
+   * @param props request configurations
    * @returns a promise of the result of fetch
    * @returns
    */
-  async put<T>(url: string, data?: unknown, options?: RequestInit): Promise<T> {
-    return this.fetch(url, {
-      ...options,
+  async put<T>(url: string, data?: unknown, props?: RequestProps): Promise<T> {
+    return this.request(url, {
+      ...props,
+      data,
       method: "PUT",
-      body: JSON.stringify(data),
     });
   }
 
@@ -198,19 +206,19 @@ export default class Fetch {
    * makes a DELETE method request
    * @param url
    * @param data the data to be parsed into request body
-   * @param options fetch request init
+   * @param props request configurations
    * @returns a promise of the result of fetch
    * @returns
    */
   async delete<T>(
     url: string,
     data?: unknown,
-    options?: RequestInit
+    props?: RequestProps
   ): Promise<T> {
-    return this.fetch(url, {
-      ...options,
+    return this.request(url, {
+      ...props,
+      data,
       method: "DELETE",
-      body: JSON.stringify(data),
     });
   }
 
@@ -238,7 +246,7 @@ export default class Fetch {
    * @param locale
    * @returns the current instance
    */
-  setLocale(locale?: string): this {
+  locale(locale?: string): this {
     if (!locale) throw new WrongLocaleError();
 
     this.header(ACCEPT_LANGUAGE, locale);
@@ -254,7 +262,7 @@ export default class Fetch {
    * @param token
    * @returns the current instance
    */
-  setAuthToken(token: string): this {
+  authToken(token: string): this {
     if (!token) throw new NoKeyProvidedError();
 
     this.header(AUTHORIZATION, token);
@@ -262,13 +270,26 @@ export default class Fetch {
   }
 
   /**
-   * Includes credentials and http-cookied in the request
+   * Includes credentials and http-cookies in the request
    * @returns the current instance
    */
   includeCredentials() {
-    this.init = {
-      ...this.init,
-      credentials: "include",
+    this.current = {
+      ...this.current,
+      includeCredentials: true,
+    };
+
+    return this;
+  }
+
+  /**
+   * Excludes credentials and http-cookies from the request
+   * @returns the current instance
+   */
+  excludeCredentials() {
+    this.current = {
+      ...this.current,
+      includeCredentials: false,
     };
 
     return this;
@@ -298,8 +319,8 @@ export default class Fetch {
   header(key: string, value?: string): (string | undefined) | this {
     // it's a SET method for a request header
     if (value) {
-      this.init.headers = {
-        ...this.init.headers,
+      this.current.headers = {
+        ...this.current.headers,
         [key]: value,
       };
       return this;
@@ -307,7 +328,7 @@ export default class Fetch {
 
     // it's a GET method for a request header
     else {
-      return new Headers(this.init.headers).get(key) ?? undefined;
+      return new Headers(this.current.headers).get(key) ?? undefined;
     }
   }
 
@@ -320,8 +341,8 @@ export default class Fetch {
 
     if (!this.header(key)) throw new KeyNotFoundError();
 
-    const { [key]: _, ...newHeaders } = this.init.headers as any;
-    this.init.headers = newHeaders as HeadersInit;
+    const { [key]: _, ...newHeaders } = this.current.headers as any;
+    this.current.headers = newHeaders as HeadersInit;
 
     return this;
   }
@@ -332,27 +353,49 @@ export default class Fetch {
   //===============
 
   //============
-  //#region Init
+  //#region Config
 
-  private config(options: RequestInit): RequestInit {
+  private config(settings: InnerRequestProps): RequestInit {
+    this.applyGlobalToCurrent();
+    this.settingsToRequestInit({ ...this.current, ...settings });
+
+    return this.init;
+  }
+
+  private applyGlobalToCurrent() {
     // Include global locale to fetch init if there's any
     if (!this.header(ACCEPT_LANGUAGE) && Fetch.global.locale)
-      this.setLocale(Fetch.global.locale);
+      this.locale(Fetch.global.locale);
 
     // Include global auth token to fetch init if there's any
     if (!this.header(AUTHORIZATION) && Fetch.global.authToken)
-      this.setAuthToken(Fetch.global.authToken);
+      this.authToken(Fetch.global.authToken);
 
     // Merge global headers with provided headers
     if (Fetch.global.headers)
-      this.init.headers = { ...Fetch.global.headers, ...this.init.headers };
+      this.current.headers = {
+        ...Fetch.global.headers,
+        ...this.current.headers,
+      };
 
     // Incldue credentials if its globally set
     if (Fetch.global.includeCredentials) this.includeCredentials();
-
-    // Merge request config with request method and body
-    return { ...this.init, ...options };
   }
+
+  private settingsToRequestInit(settings: InnerRequestProps) {
+    const init: RequestInit = {};
+
+    init.headers = settings.headers;
+    init.method = settings.method;
+
+    if (settings.data) init.body = JSON.stringify(settings.data);
+
+    if (settings.includeCredentials) init.credentials = "include";
+
+    this.init = init;
+  }
+
+  // private resetSettings() {}
 
   //#endregion
   //============
@@ -364,8 +407,8 @@ export default class Fetch {
    * Sets the base url for the http instance
    * @param baseUrl
    */
-  setBaseUrl(baseUrl: string) {
-    this.baseUrl = baseUrl;
+  baseUrl(baseUrl: string) {
+    this.current.baseUrl = baseUrl;
   }
 
   /**
@@ -374,7 +417,7 @@ export default class Fetch {
    * @returns Full URL
    */
   private getFullUrl(url: string) {
-    const baseUrl = this.baseUrl || Fetch.global.baseUrl;
+    const baseUrl = this.current.baseUrl || Fetch.global.baseUrl;
 
     if (!baseUrl) return url;
 
@@ -389,17 +432,20 @@ export default class Fetch {
   //#endregion
   //===========
 
-  //===========
+  //===============
   //#region Timeout
 
   /**
    * sets the timeout for the current http instance
    * @param timeout
+   * @returns current instance
    */
-  setTimeout(timeout: number) {
-    this.timeout = timeout;
+  timeout(timeout: number) {
+    this.current.timeout = timeout;
+
+    return this;
   }
 
   //#endregion
-  //===========
+  //===============
 }

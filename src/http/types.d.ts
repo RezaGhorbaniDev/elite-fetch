@@ -1,5 +1,7 @@
 import { FetchError, RequestError } from "../lib/errors";
 
+type RequestMethod = "GET" | "POST" | "PUT" | "DELETE";
+
 export type ErrorCallback = (error: FetchError) => void;
 export type RequestCallback = (config: RequestInit) => void | Promise<void>;
 export type RespondCallback = <TResult>(
@@ -12,12 +14,19 @@ export type FetchEvents = {
   onRespond?: RespondCallback;
 };
 
-export type FetchDefaultSettings = FetchEvents & {
+export type RequestProps = {
   // props
   locale?: string;
   authToken?: string;
   headers?: HeadersInit;
   includeCredentials?: boolean;
   baseUrl?: string;
-  timeout: number;
+  timeout?: number;
 };
+
+export type InnerRequestProps = RequestProps & {
+  method: RequestMethod;
+  data?: object | unknown;
+};
+
+export type FetchProps = FetchEvents & RequestProps;

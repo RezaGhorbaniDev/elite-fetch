@@ -166,7 +166,7 @@ describe("Authorization", () => {
     mockGetUsers();
     const authToken = "Bearer testToken1234";
 
-    await fetch.setAuthToken(authToken).get("http://example.com/data");
+    await fetch.authToken(authToken).get("http://example.com/data");
 
     expect(fetch.header(AUTHORIZATION)).toEqual(authToken);
   });
@@ -234,7 +234,7 @@ describe("Locale", () => {
 
     // Init with different locale
     const anotherFetch = new Fetch();
-    anotherFetch.setLocale("fa-IR");
+    anotherFetch.locale("fa-IR");
 
     expect(anotherFetch.header(ACCEPT_LANGUAGE)).toEqual("fa-IR");
 
@@ -268,7 +268,7 @@ describe("fetchData", () => {
   test("POST method", async () => {
     mockCreateUser();
 
-    const innerFetch = jest.spyOn(fetch as any, "fetch");
+    const innerFetch = jest.spyOn(fetch as any, "request");
 
     const { id } = await fetch.post<typeof user & { id: number }>(
       "http://example.com/data",
@@ -281,7 +281,7 @@ describe("fetchData", () => {
 
     expect(innerFetch).toHaveBeenCalledWith("http://example.com/data", {
       method: "POST",
-      body: JSON.stringify(user),
+      data: user,
     });
 
     const [url] = (global.fetch as any).mock.calls[0];
