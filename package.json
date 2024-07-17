@@ -1,7 +1,7 @@
 {
   "name": "elite-fetch",
-  "description": "elite-fetch",
-  "version": "1.2.1",
+  "description": "An elite HTTP client tool for making and handling requests.",
+  "version": "1.2.2",
   "main": "dist/index.umd.js",
   "module": "dist/index.es.js",
   "types": "dist/index.d.ts",
@@ -35,5 +35,20 @@
     "vite": "^5.0.0",
     "vite-plugin-dts": "^3.6.3"
   },
-  "packageManager": "yarn@4.3.1"
+  "packageManager": "yarn@4.3.1",
+  "keywords": [
+    "http client",
+    "fetch",
+    "http request"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rezaghorbani-dev/elite-fetch.git"
+  },
+  "author": {
+    "name": "Reza Ghorbani",
+    "url": "https://rezaghorbani.dev/",
+    "email": "rg@rezaghorbani.dev"
+  }
 }
