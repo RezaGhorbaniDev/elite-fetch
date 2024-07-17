@@ -12,7 +12,8 @@
   - [Usage](#usage)
     - [Using `async/await`](#using-asyncawait)
     - [Using Promises](#using-promises)
-  - [Configuration](#configuration)
+  - [Global Configuration](#global-configuration)
+  - [Per-Instance Configuration](#per-instance-configuration)
     - [Using Chaining](#using-chaining)
     - [Using Parameters](#using-parameters)
   - [API](#api)
@@ -22,15 +23,13 @@
     - [delete](#deleteurl-data-props)
     - [locale](#localelocale)
     - [authToken](#authtokentoken)
-    - [includeCredentials](#includecredentials)
+    - [includeCredentials](#includecredentials-1)
     - [excludeCredentials](#excludecredentials)
     - [header](#headerkey)
     - [removeHeader](#removeheaderkey)
     - [baseUrl](#baseurlbaseurl)
     - [timeout](#timeouttimeout)
   - [Types](#types)
-    - [RequestProps](#requestprops)
-    - [UrlParameters](#urlparameters)
   - [Thank You](#thank-you)
 
 ## Getting Started
@@ -71,7 +70,156 @@ http.get("https://example.com/api/users").then((users) => {
 });
 ```
 
-## Configuration
+## Global Configuration
+
+You can change the default settings of your request all across the application. Here you can see all available configs you can set globally with their default values.
+
+### `baseUrl`
+
+Base url of all http requests.
+
+| Type   | Default value |
+| ------ | ------------- |
+| string | ""            |
+
+#### Example
+
+```js
+http.global.baseUrl = "https://example.com";
+```
+
+### `authToken`
+
+Authorization header for all http requests.
+
+| Type   | Default value |
+| ------ | ------------- |
+| string | `undefined`   |
+
+#### Example
+
+```js
+http.global.authToken = "Bearer TOKEN_VALUE";
+```
+
+### `headers`
+
+Request headers of all http requests.
+
+| Type        | Default value                            |
+| ----------- | ---------------------------------------- |
+| HeadersInit | `{ "Content-Type": "application/json" }` |
+
+#### Example
+
+```js
+http.global.headers = { "Custom-Header": "test value" };
+```
+
+### `includeCredentials`
+
+Including credentials and http-cookies in all http requests.
+
+| Type    | Default value |
+| ------- | ------------- |
+| Boolean | false         |
+
+#### Example
+
+```js
+http.global.includeCredentials = true;
+```
+
+### `locale`
+
+Accept-language header of all http requests.
+
+| Type   | Default value         |
+| ------ | --------------------- |
+| string | default browser value |
+
+#### Example
+
+```js
+http.global.locale = "fr-FR";
+```
+
+### `timeout`
+
+Request timeout of all http requests.
+
+| Type   | Default value |
+| ------ | ------------- |
+| number | 5000          |
+
+#### Example
+
+```js
+http.global.timeout = 10000;
+```
+
+### `onError`
+
+The error callback that would get called if any request catches an error.
+
+| Type          | Default value |
+| ------------- | ------------- |
+| ErrorCallback | `undefined`   |
+
+#### Example
+
+```js
+http.global.onError = (error) => {
+  console.log(error.statusCode, error.message);
+};
+```
+
+### `onRequest`
+
+The callback that would get called before all requests. You can access and change request initialization in this callback.
+
+| Type            | Default value |
+| --------------- | ------------- |
+| RequestCallback | `undefined`   |
+
+#### Example
+
+```js
+http.global.onRequest = (init) => {
+  var myController = new AbortController();
+  init.signal = myController.signal;
+};
+```
+
+### `onRespond`
+
+The callback that would get called after request each successfully responded. You can access and change request result in this callback.
+
+| Type            | Default value |
+| --------------- | ------------- |
+| RespondCallback | `undefined`   |
+
+> [!NOTE]
+> If you're setting this callback globally, please consider to return the result, so you can access it in the next promise chain.
+
+#### Example
+
+```js
+http.global.onRespond = (result) => {
+  console.log(result);
+
+  // Most return. otherwise result would be undefined in the next chain
+  return result;
+};
+
+http.get("https://example.com/api/users").then((users) => {
+  // you can access users now
+});
+```
+
+## Per-Instance Configuration
+
+You can also change request configuration for each `http` instance. These configurations **will override global configuration**.
 
 ### Using Chaining
 
@@ -364,6 +512,41 @@ It's an object that all its properties have a `string` or `number` value.
 
 ```ts
 type UrlParameters = Record<string, string | number>;
+```
+
+### `ErrorCallback`
+
+The interface for `onError` callback.
+
+```ts
+type ErrorCallback = (error: FetchError) => void;
+```
+
+### `FetchError`
+
+The interface for http request errors.
+
+```ts
+type FetchError = {
+  statusCode: number;
+  message: string;
+};
+```
+
+### `RequestCallback`
+
+The interface for `onRequest` callback.
+
+```ts
+type RequestCallback = (config: RequestInit) => void | Promise<void>;
+```
+
+### `RespondCallback`
+
+The interface for `onRespond` callback
+
+```ts
+type RespondCallback = <TResult>(result: TResult) => TResult | Promise<TResult>;
 ```
 
 ## Thank You
