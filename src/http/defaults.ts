@@ -4,7 +4,7 @@ import {
   FetchProps,
   RequestCallback,
   RespondCallback,
-} from "./types";
+} from "./fetch";
 
 export const defaultSettings: FetchProps = {
   headers: {
