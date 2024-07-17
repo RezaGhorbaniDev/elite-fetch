@@ -31,7 +31,7 @@ export default class Fetch {
   /**
    * Settings for all http instances
    */
-  public global: FetchProps = FetchDefaults.getInstance();
+  public readonly global: FetchProps = FetchDefaults.getInstance();
 
   // inner level
   /**
@@ -400,7 +400,15 @@ export default class Fetch {
   //#region Defaults
 
   setDefaults(defaults: FetchProps): void {
-    this.global = defaults;
+    this.global.authToken = defaults.authToken;
+    this.global.baseUrl = defaults.baseUrl;
+    this.global.headers = defaults.headers;
+    this.global.includeCredentials = defaults.includeCredentials;
+    this.global.locale = defaults.locale;
+    this.global.timeout = defaults.timeout;
+    this.global.onError = defaults.onError;
+    this.global.onRequest = defaults.onRequest;
+    this.global.onRespond = defaults.onRespond;
   }
 
   // private resetSettings() {}
