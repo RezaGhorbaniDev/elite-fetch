@@ -23,13 +23,10 @@ export const users = [
 //======================= Mock fetch response
 
 const mockFetchResponse = (response: Partial<Response>) => {
-  // Mock the response
-  // global.fetch = jest.fn(() => Promise.resolve(response as Response));
   global.fetch = jest.fn(() => Promise.resolve(response as Response));
 };
 
 export const mockFetchLongResponse = async (milliseconds: number) => {
-  // Mock the response
   global.fetch = jest.fn(async () => {
     // delay the response
     await new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -57,7 +54,6 @@ export const mockCreateUser = () => {
 
 export const resetMocks = () => {
   jest.clearAllMocks();
-  Fetch.global = {
-    timeout: 5000,
-  };
+  new Fetch().global.timeout = 5000;
+  new Fetch().global.baseUrl = "";
 };

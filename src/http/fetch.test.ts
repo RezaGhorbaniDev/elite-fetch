@@ -21,12 +21,12 @@ describe("Base Url", () => {
   });
 
   /**
-   * it should combine the global base url with given, after initialization
+   * it should combine the global base url after initialization with given url.
    */
   test("Global base url, after initialization", async () => {
     mockGetUsers();
 
-    Fetch.global.baseUrl = "http://example.com/";
+    fetch.global.baseUrl = "http://example.com/";
     await fetch.get("data");
 
     const [url] = (global.fetch as any).mock.calls[0];
@@ -34,17 +34,32 @@ describe("Base Url", () => {
   });
 
   /**
-   * it should combine the global base url with given, before initialization
+   * it should combine the global base url before its initialization with given url.
    */
   test("Global base url, before initialization", async () => {
     mockGetUsers();
 
-    Fetch.global.baseUrl = "http://example.com/";
-    const fetch = new Fetch();
-    await fetch.get("data");
+    fetch.global.baseUrl = "http://example.com/";
+
+    // new fetch
+    const newFetch = new Fetch();
+    await newFetch.get("data2");
 
     const [url] = (global.fetch as any).mock.calls[0];
-    expect(url).toBe("http://example.com/data");
+    expect(url).toBe("http://example.com/data2");
+  });
+
+  /**
+   * it should override the base url
+   */
+  test("Global base url, override", async () => {
+    mockGetUsers();
+
+    fetch.global.baseUrl = "http://example.com/";
+    await fetch.baseUrl("http://example2.com").get("data");
+
+    const [url] = (global.fetch as any).mock.calls[0];
+    expect(url).toBe("http://example2.com/data");
   });
 
   /**
@@ -53,7 +68,7 @@ describe("Base Url", () => {
   test("handling double slashes", async () => {
     mockGetUsers();
 
-    Fetch.global.baseUrl = "http://example.com/";
+    fetch.global.baseUrl = "http://example.com/";
     await fetch.get("/data");
 
     const [url] = (global.fetch as any).mock.calls[0];
@@ -66,7 +81,7 @@ describe("Base Url", () => {
   test("handling no slashes", async () => {
     mockGetUsers();
 
-    Fetch.global.baseUrl = "http://example.com";
+    fetch.global.baseUrl = "http://example.com";
     await fetch.get("data");
 
     const [url] = (global.fetch as any).mock.calls[0];
@@ -105,9 +120,8 @@ describe("Headers CRUD", () => {
    * it should throw error if key is null or empty
    */
   test("Check for empty header name before delete", async () => {
-    Fetch.global.locale = globalLocale;
-
     const fetch = new Fetch();
+    fetch.global.locale = globalLocale;
 
     expect(() => fetch.removeHeader("")).toThrow(NoKeyProvidedError);
   });
@@ -116,9 +130,8 @@ describe("Headers CRUD", () => {
    * it should throw error if key is not found
    */
   test("Validate header name before delete", async () => {
-    Fetch.global.locale = globalLocale;
-
     const fetch = new Fetch();
+    fetch.global.locale = globalLocale;
 
     expect(() => fetch.removeHeader("WrongKey")).toThrow(KeyNotFoundError);
   });
@@ -127,12 +140,60 @@ describe("Headers CRUD", () => {
    * it should remove the given attribute
    */
   test("Delete header", async () => {
-    Fetch.global.locale = globalLocale;
-
     const fetch = new Fetch();
+    fetch.global.locale = globalLocale;
     fetch.removeHeader(ACCEPT_LANGUAGE);
 
     expect(fetch.header(ACCEPT_LANGUAGE)).toBeUndefined();
+  });
+});
+
+describe("fetchData", () => {
+  let fetch: Fetch;
+
+  beforeEach(() => {
+    fetch = new Fetch();
+  });
+  afterEach(() => {
+    resetMocks();
+  });
+
+  test("Get method", async () => {
+    mockGetUsers();
+
+    const data = await fetch.get("http://example.com/data");
+
+    expect(data).toEqual(users);
+    expect(fetch.global.baseUrl).toEqual("");
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+
+    const [url] = (global.fetch as any).mock.calls[0];
+    expect(url).toBe("http://example.com/data");
+  });
+
+  test("POST method", async () => {
+    mockCreateUser();
+
+    const innerFetch = jest.spyOn(fetch as any, "request");
+
+    const { id } = await fetch.post<typeof user & { id: number }>(
+      "http://example.com/data",
+      user
+    );
+
+    expect(id).toEqual(3);
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+
+    expect(innerFetch).toHaveBeenCalledWith("http://example.com/data", {
+      method: "POST",
+      data: user,
+    });
+
+    expect(fetch.global.baseUrl).toBe("");
+
+    const [url] = (global.fetch as any).mock.calls[0];
+    expect(url).toBe("http://example.com/data");
   });
 });
 
@@ -152,7 +213,7 @@ describe("Authorization", () => {
   test("Global auth token", async () => {
     mockGetUsers();
     const authToken = "Bearer testToken1234";
-    Fetch.global.authToken = authToken;
+    fetch.global.authToken = authToken;
 
     await fetch.get("http://example.com/data");
 
@@ -187,7 +248,7 @@ describe("Authorization", () => {
    */
   test("Global credentials", async () => {
     mockGetUsers();
-    Fetch.global.includeCredentials = true;
+    fetch.global.includeCredentials = true;
 
     await fetch.get("http://example.com/data");
 
@@ -217,9 +278,9 @@ describe("Locale", () => {
    * it should set the locale globally
    */
   test("Global locale", async () => {
-    Fetch.global.locale = globalLocale;
-
     const fetch = new Fetch();
+    fetch.global.locale = globalLocale;
+
     expect(fetch.header(ACCEPT_LANGUAGE)).toEqual(globalLocale);
   });
 
@@ -227,10 +288,9 @@ describe("Locale", () => {
    * it should override the default locale
    */
   test("Overriding global locale", async () => {
-    Fetch.global.locale = globalLocale;
-
     // Init with default locale
     const fetch = new Fetch();
+    fetch.global.locale = globalLocale;
 
     // Init with different locale
     const anotherFetch = new Fetch();
@@ -239,53 +299,6 @@ describe("Locale", () => {
     expect(anotherFetch.header(ACCEPT_LANGUAGE)).toEqual("fa-IR");
 
     expect(fetch.header(ACCEPT_LANGUAGE)).toEqual(globalLocale);
-  });
-});
-
-describe("fetchData", () => {
-  let fetch: Fetch;
-
-  beforeEach(() => {
-    fetch = new Fetch();
-  });
-  afterEach(() => {
-    resetMocks();
-  });
-
-  test("Get method", async () => {
-    mockGetUsers();
-
-    const data = await fetch.get("http://example.com/data");
-
-    expect(data).toEqual(users);
-
-    expect(global.fetch).toHaveBeenCalledTimes(1);
-
-    const [url] = (global.fetch as any).mock.calls[0];
-    expect(url).toBe("http://example.com/data");
-  });
-
-  test("POST method", async () => {
-    mockCreateUser();
-
-    const innerFetch = jest.spyOn(fetch as any, "request");
-
-    const { id } = await fetch.post<typeof user & { id: number }>(
-      "http://example.com/data",
-      user
-    );
-
-    expect(id).toEqual(3);
-
-    expect(global.fetch).toHaveBeenCalledTimes(1);
-
-    expect(innerFetch).toHaveBeenCalledWith("http://example.com/data", {
-      method: "POST",
-      data: user,
-    });
-
-    const [url] = (global.fetch as any).mock.calls[0];
-    expect(url).toBe("http://example.com/data");
   });
 });
 

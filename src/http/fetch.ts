@@ -19,17 +19,9 @@ import {
   ABORT_ERROR,
   ACCEPT_LANGUAGE,
   AUTHORIZATION,
-  TIMEOUT_DURATION,
   TIMEOUT_ERROR,
 } from "../lib/constants";
-
-const defaultSettings: FetchProps = {
-  headers: {
-    "Content-Type": "application/json",
-  },
-  timeout: TIMEOUT_DURATION,
-  baseUrl: "",
-};
+import FetchDefaults, { defaultSettings } from "./defaults";
 
 /**
  * Advanced http request class
@@ -39,7 +31,7 @@ export default class Fetch {
   /**
    * Settings for all http instances
    */
-  static global: FetchProps = structuredClone(defaultSettings);
+  public global: FetchProps = FetchDefaults.getInstance();
 
   // inner level
   /**
@@ -82,10 +74,9 @@ export default class Fetch {
     const init = this.config(options);
     init.signal = this.controller.signal;
 
-    if (Fetch.global.onRequest)
-      if (isAsync(Fetch.global.onRequest))
-        await Fetch.global.onRequest(options);
-      else Fetch.global.onRequest(options);
+    if (this.global.onRequest)
+      if (isAsync(this.global.onRequest)) await this.global.onRequest(options);
+      else this.global.onRequest(options);
 
     const fullUrl = this.getFullUrl(url);
     const response = await this.requestWithTimeout(fullUrl, init);
@@ -99,18 +90,18 @@ export default class Fetch {
       }
 
       // Apply the response interceptor if unknown
-      return Fetch.global.onRespond
-        ? isAsync(Fetch.global.onRespond)
+      return this.global.onRespond
+        ? isAsync(this.global.onRespond)
           ? // is async
-            await Fetch.global.onRespond(data)
+            await this.global.onRespond(data)
           : // is not
-            Fetch.global.onRespond(data)
+            this.global.onRespond(data)
         : data;
     } else {
       // Throw an error with the status text
       const error = new FetchError(response.status, response.statusText);
 
-      Fetch.global.onError && Fetch.global.onError(error);
+      this.global.onError && this.global.onError(error);
 
       throw error;
     }
@@ -369,22 +360,22 @@ export default class Fetch {
 
   private applyGlobalToCurrent() {
     // Include global locale to fetch init if there's any
-    if (!this.header(ACCEPT_LANGUAGE) && Fetch.global.locale)
-      this.locale(Fetch.global.locale);
+    if (!this.header(ACCEPT_LANGUAGE) && this.global.locale)
+      this.locale(this.global.locale);
 
     // Include global auth token to fetch init if there's any
-    if (!this.header(AUTHORIZATION) && Fetch.global.authToken)
-      this.authToken(Fetch.global.authToken);
+    if (!this.header(AUTHORIZATION) && this.global.authToken)
+      this.authToken(this.global.authToken);
 
     // Merge global headers with provided headers
-    if (Fetch.global.headers)
+    if (this.global.headers)
       this.current.headers = {
-        ...Fetch.global.headers,
+        ...this.global.headers,
         ...this.current.headers,
       };
 
     // Incldue credentials if its globally set
-    if (Fetch.global.includeCredentials) this.includeCredentials();
+    if (this.global.includeCredentials) this.includeCredentials();
   }
 
   private settingsToRequestInit(settings: InnerRequestProps) {
@@ -405,15 +396,30 @@ export default class Fetch {
   //#endregion
   //============
 
+  //============
+  //#region Defaults
+
+  setDefaults(defaults: FetchProps): void {
+    this.global = defaults;
+  }
+
+  // private resetSettings() {}
+
+  //#endregion
+  //============
+
   //===========
   //#region Url
 
   /**
    * Sets the base url for the http instance
    * @param baseUrl
+   * @returns current instance
    */
   baseUrl(baseUrl: string) {
     this.current.baseUrl = baseUrl;
+
+    return this;
   }
 
   /**
@@ -422,7 +428,7 @@ export default class Fetch {
    * @returns Full URL
    */
   private getFullUrl(url: string) {
-    const baseUrl = this.current.baseUrl || Fetch.global.baseUrl;
+    const baseUrl = this.current.baseUrl || this.global.baseUrl;
 
     if (!baseUrl) return url;
 
