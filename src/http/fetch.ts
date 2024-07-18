@@ -39,7 +39,17 @@ export default class Fetch {
    */
   private init: RequestInit;
 
+  /**
+   * Request abort controller
+   */
   private controller: AbortController;
+
+  /**
+   * Request events
+   */
+  public onError?: ErrorCallback;
+  public onRequest?: RequestCallback;
+  public onRespond?: RespondCallback;
 
   //#region Constructor
 
@@ -69,9 +79,10 @@ export default class Fetch {
     const init = this.config(options);
     init.signal = this.controller.signal;
 
-    if (this.global.onRequest)
-      if (isAsync(this.global.onRequest)) await this.global.onRequest(options);
-      else this.global.onRequest(options);
+    const requestCallback = this.onRequest ?? this.global.onRequest;
+    if (requestCallback)
+      if (isAsync(requestCallback)) await requestCallback(options);
+      else requestCallback(options);
 
     const fullUrl = this.getFullUrl(url);
     const response = await this.requestWithTimeout(fullUrl, init);
@@ -85,18 +96,20 @@ export default class Fetch {
       }
 
       // Apply the response interceptor if unknown
-      return this.global.onRespond
-        ? isAsync(this.global.onRespond)
+      const respondCallback = this.onRespond ?? this.global.onRespond;
+      return respondCallback
+        ? isAsync(respondCallback)
           ? // is async
-            await this.global.onRespond(data)
+            await respondCallback(data)
           : // is not
-            this.global.onRespond(data)
+            respondCallback(data)
         : data;
     } else {
       // Throw an error with the status text
       const error = new FetchError(response.status, response.statusText);
 
-      this.global.onError && this.global.onError(error);
+      const errorCallback = this.onError ?? this.global.onError;
+      errorCallback && errorCallback(error);
 
       throw error;
     }
@@ -464,6 +477,9 @@ export default class Fetch {
   //===============
 }
 
+//=============
+//#region Types
+
 type RequestMethod = "GET" | "POST" | "PUT" | "DELETE";
 
 export type ErrorCallback = (error: FetchError) => void;
@@ -496,3 +512,6 @@ export type InnerRequestProps = RequestProps & {
 };
 
 export type FetchProps = FetchEvents & RequestProps;
+
+//#endregion
+//=============
