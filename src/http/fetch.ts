@@ -17,6 +17,7 @@ import {
   TIMEOUT_ERROR,
 } from "../lib/constants";
 import FetchDefaults, { defaultSettings } from "./defaults";
+import { combineUrls } from "../lib/utils/url";
 
 /**
  * Advanced http request class
@@ -446,14 +447,7 @@ export default class Fetch {
   private getFullUrl(url: string) {
     const baseUrl = this.current.baseUrl || this.global.baseUrl;
 
-    if (!baseUrl) return url;
-
-    // Avoid double slash
-    if (baseUrl.endsWith("/") && url.startsWith("/")) url = url.substring(1);
-    // Avoid no slash between them
-    else if (!baseUrl.endsWith("/") && !url.startsWith("/")) url = "/" + url;
-
-    return baseUrl + url;
+    return combineUrls(url, baseUrl);
   }
 
   //#endregion
